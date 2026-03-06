@@ -1,0 +1,11 @@
+[     651ms] [WARNING] ./src/components/UpdateProductModal.js
+  Line 139:6:  React Hook useEffect has missing dependencies: 'dimensionsInitialized' and 'selectedColors.length'. Either include them or remove the dependency array  react-hooks/exhaustive-deps @ http://localhost:3001/static/js/0.chunk.js:75694
+[     651ms] [WARNING] ./src/components/CreateNewProductModal.js
+  Line 29:3:  'Popover' is defined but never used          no-unused-vars
+  Line 30:3:  'PopoverTrigger' is defined but never used   no-unused-vars
+  Line 31:3:  'PopoverContent' is defined but never used   no-unused-vars
+  Line 32:3:  'PopoverBody' is defined but never used      no-unused-vars
+  Line 49:7:  'colors' is assigned a value but never used  no-unused-vars @ http://localhost:3001/static/js/0.chunk.js:75694
+[     897ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://artbois-api.politewater-55e8d16e.francecentral.azurecontainerapps.io/api/products/:0
+[     901ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://artbois-api.politewater-55e8d16e.francecentral.azurecontainerapps.io/api/admin/orders:0
+[     902ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://artbois-api.politewater-55e8d16e.francecentral.azurecontainerapps.io/api/admin/users/:0

@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment files (NEVER commit these)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*/.env
+*/.env.local
+*/.env.development.local
+*/.env.test.local
+*/.env.production.local
+
+# Build outputs
+build/
+*/build/
+dist/
+*/dist/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Test coverage
+coverage/
+*/coverage/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Package lock files (optional - some teams commit these)
+# package-lock.json
+# yarn.lock
+
+# Sensitive deployment files with Azure credentials
+azure info poly account azure.txt
+DEPLOYMENT_GUIDE.md
+WHERE_TO_FIND_VALUES.md
+DEPLOYMENT_COMMANDS.sh
+DEPLOYMENT_CHECKLIST.md
+DEPLOY.md
+deploy quide.txt
+DARISTA_DEPLOYMENT_GUIDE.md

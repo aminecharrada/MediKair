@@ -1,0 +1,40 @@
+[    2874ms] Error: Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/src/pages/SingleProductPage/styles.js: Expecting Unicode escape sequence \uXXXX. (3:28)
+
+[0m [90m 1 |[39m [36mimport[39m styled [36mfrom[39m [32m'styled-components'[39m[33m;[39m[0m
+[0m [90m 2 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 3 |[39m [36mconst[39m [33mWrapper[39m [33m=[39m styled[33m.[39mmain[37m[41m[1m\[22m[49m[39m[32m`[39m[0m
+[0m [90m   |[39m                             [31m[1m^[22m[39m[0m
+[0m [90m 4 |[39m [32m  background: var(--clr-background, #f6f8f8);[39m[0m
+[0m [90m 5 |[39m [32m  min-height: 100vh;[39m[0m
+[0m [90m 6 |[39m[0m
+    at Parser._raise (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:569:17)
+    at Parser.raiseWithData (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:562:17)
+    at Parser.raise (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:523:17)
+    at Parser.readWord1 (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:3196:16)
+    at Parser.readWord (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:3222:23)
+    at Parser.getTokenFromCode (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:2670:16)
+    at Parser.getTokenFromCode (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:7559:18)
+    at Parser.getTokenFromCode (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:5689:20)
+    at Parser.nextToken (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:2055:10)
+    at Parser.next (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:1965:10)
+    at Parser._raise (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:569:17)
+    at Parser.raiseWithData (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:562:17)
+    at Parser.raise (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:523:17)
+    at Parser.readWord1 (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:3196:16)
+    at Parser.readWord (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:3222:23)
+    at Parser.getTokenFromCode (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:2670:16)
+    at Parser.getTokenFromCode (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:7559:18)
+    at Parser.getTokenFromCode (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:5689:20)
+    at Parser.nextToken (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:2055:10)
+    at Parser.next (/home/charrada/Desktop/Charrada/ECommerceProjectF/Darista/marque-blanche-ecommerce-main/node_modules/@babel/parser/lib/index.js:1965:10)
+    at ./src/pages/SingleProductPage/styles.js (http://localhost:3000/static/js/bundle.js:25070:7)
+    at options.factory (http://localhost:3000/static/js/bundle.js:265909:31)
+    at __webpack_require__ (http://localhost:3000/static/js/bundle.js:265381:33)
+    at fn (http://localhost:3000/static/js/bundle.js:265580:21)
+    at ./src/pages/SingleProductPage/index.js (http://localhost:3000/static/js/bundle.js:23771:65)
+    at options.factory (http://localhost:3000/static/js/bundle.js:265909:31)
+    at __webpack_require__ (http://localhost:3000/static/js/bundle.js:265381:33)
+    at fn (http://localhost:3000/static/js/bundle.js:265580:21)
+    at ./src/pages/index.js (http://localhost:3000/static/js/bundle.js:25102:77)
+    at options.factory (http://localhost:3000/static/js/bundle.js:265909:31)

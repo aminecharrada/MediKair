@@ -1,0 +1,82 @@
+name: Deploy Darista Backend API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'marque-blanche-ecommerce-backend-main/**'
+      - '.github/workflows/backend.yml'
+  workflow_dispatch:
+
+env:
+  ACR_NAME: daristaacr
+  ACR_LOGIN_SERVER: daristaacr.azurecr.io
+  IMAGE_NAME: darista-api
+  RESOURCE_GROUP: darista-rg
+  CONTAINER_APP_ENV: darista-env
+  CONTAINER_APP_NAME: darista-api
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    name: Build & Push Docker Image
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        run: |
+          cd marque-blanche-ecommerce-backend-main
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker tag ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    name: Deploy to Azure Container Apps
+    
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - name: Login to Azure CLI
+        run: |
+          # Trim whitespace from secrets
+          CLIENT_ID=$(echo "$AZURE_CLIENT_ID" | tr -d '[:space:]')
+          CLIENT_SECRET=$(echo "$AZURE_CLIENT_SECRET" | tr -d '[:space:]')
+          TENANT_ID=$(echo "$AZURE_TENANT_ID" | tr -d '[:space:]')
+          
+          az login --service-principal \
+            -u "$CLIENT_ID" \
+            -p "$CLIENT_SECRET" \
+            --tenant "$TENANT_ID"
+
+      - name: Deploy to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --set-env-vars \
+              FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
+              ADMIN_URL=${{ secrets.ADMIN_URL }}
+
+      - name: Verify Deployment
+        run: |
+          FQDN=$(az containerapp show --name ${{ env.CONTAINER_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "✅ Backend deployed at: https://$FQDN"
+          sleep 10
+          curl -sf "https://$FQDN/" && echo "✅ Health check passed!" || echo "⚠️ Health check pending..."

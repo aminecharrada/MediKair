@@ -1,0 +1,12 @@
+[   80156ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://localhost:3001/static/media/hero-bedroom.3531ab6a63bdeede829d.jpg:0
+[   81218ms] [ERROR] WebSocket connection to 'ws://localhost:3001/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/js/bundle.js:243285
+[   83235ms] [ERROR] WebSocket connection to 'ws://localhost:3001/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/js/bundle.js:243285
+[   87288ms] [ERROR] WebSocket connection to 'ws://localhost:3001/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/js/bundle.js:243285
+[   89307ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/media/hero-bedroom.3531ab6a63bdeede829d.jpg:0
+[   95357ms] [ERROR] WebSocket connection to 'ws://localhost:3001/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/js/bundle.js:243285
+[  110306ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/media/hero-bedroom.3531ab6a63bdeede829d.jpg:0
+[  111422ms] [ERROR] WebSocket connection to 'ws://localhost:3001/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/js/bundle.js:243285
+[  131311ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/media/hero-bedroom.3531ab6a63bdeede829d.jpg:0
+[  143436ms] [ERROR] WebSocket connection to 'ws://localhost:3001/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/js/bundle.js:243285
+[  152310ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/media/hero-bedroom.3531ab6a63bdeede829d.jpg:0
+[  173313ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/static/media/hero-bedroom.3531ab6a63bdeede829d.jpg:0

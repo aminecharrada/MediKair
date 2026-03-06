@@ -1,0 +1,2 @@
+[   49375ms] [ERROR] Cross-Origin-Opener-Policy policy would block the window.closed call. @ http://localhost:3000/static/js/bundle.js:35280
+[   49375ms] [ERROR] Cross-Origin-Opener-Policy policy would block the window.closed call. @ http://localhost:3000/static/js/bundle.js:35280
