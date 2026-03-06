@@ -1,4 +1,4 @@
-# Art & Bois E-Commerce Platform
+# MediKair E-Commerce Platform
 
 A full-featured e-commerce platform for furniture sales with client storefront, admin panel, and backend API.
 
