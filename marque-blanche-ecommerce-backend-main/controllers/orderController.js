@@ -1,5 +1,7 @@
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
+const Client = require("../models/clientModel");
+const SiteSettings = require("../models/siteSettingsModel");
 const Notification = require("../models/notificationModel");
 const ErrorHandler = require("../utils/ErrorHandler");
 const catchAsyncError = require("../middleware/CatchAsyncErrors");
@@ -53,6 +55,41 @@ exports.createNewOrder = catchAsyncError(async (req, res, next) => {
     notes: notes || "",
     source: source || "web",
   });
+
+  // ── B2B Hierarchical validation check ─────────────────────
+  try {
+    const client = await Client.findById(req.user.id);
+    const settings = await SiteSettings.findOne();
+    if (
+      client &&
+      client.validationRequired &&
+      settings &&
+      settings.hierarchicalValidation &&
+      totalPrice > (settings.validationThreshold || 5000)
+    ) {
+      order.validationStatus = "pending-validation";
+      order.orderStatus = "En attente de validation";
+      order.statusHistory.push({
+        status: "pending-validation",
+        date: new Date(),
+        by: "system",
+      });
+      await order.save({ validateBeforeSave: false });
+
+      // Notify parent client if exists
+      if (client.parentClient) {
+        await createNotification(
+          client.parentClient,
+          "order",
+          "Validation requise",
+          `La commande ${order.orderNumber} de ${client.name} nécessite votre validation (${totalPrice.toFixed(2)} TND).`,
+          `/orders/${order._id}`
+        );
+      }
+    }
+  } catch (e) {
+    console.error("B2B validation check failed:", e.message);
+  }
 
   // Send notification to client
   await createNotification(
@@ -306,40 +343,131 @@ exports.validateOrder = catchAsyncError(async (req, res, next) => {
   });
 });
 
-// ── Import CSV orders (admin) ────────────────────────────────
+// ── Import CSV orders — parse raw CSV with ref_produit, quantité ──
 exports.importCSVOrders = catchAsyncError(async (req, res, next) => {
-  const { orders: csvOrders } = req.body;
+  const { csvData, clientId, shippingInfo } = req.body;
 
-  if (!Array.isArray(csvOrders) || csvOrders.length === 0) {
-    return next(new ErrorHandler("Aucune commande à importer", 400));
-  }
-
-  const results = { created: 0, errors: [] };
-
-  for (let i = 0; i < csvOrders.length; i++) {
-    try {
-      const row = csvOrders[i];
-      await Order.create({
-        shippingInfo: row.shippingInfo,
-        orderItems: row.orderItems,
-        paymentInfo: row.paymentInfo || { id: "CSV", status: "En attente", method: "transfer" },
-        itemsPrice: row.itemsPrice || 0,
-        shippingPrice: row.shippingPrice || 0,
-        totalPrice: row.totalPrice || 0,
-        client: row.client,
-        source: "csv-import",
-        notes: row.notes || "Import CSV",
-      });
-      results.created++;
-    } catch (err) {
-      results.errors.push({ row: i + 1, message: err.message });
+  // Support both raw CSV string and pre-parsed rows
+  let rows = [];
+  if (typeof csvData === "string") {
+    // Parse CSV text: expected columns = ref_produit, quantité
+    const lines = csvData.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length < 2) {
+      return next(new ErrorHandler("Le CSV doit contenir au moins un en-tête et une ligne de données", 400));
     }
+    // Skip header row
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(/[;,]/).map((c) => c.trim());
+      if (cols.length >= 2) {
+        rows.push({ ref: cols[0], quantity: parseInt(cols[1]) || 1 });
+      }
+    }
+  } else if (Array.isArray(req.body.orders)) {
+    // Legacy JSON format
+    const legacyResults = { created: 0, errors: [] };
+    for (let i = 0; i < req.body.orders.length; i++) {
+      try {
+        const row = req.body.orders[i];
+        await Order.create({
+          shippingInfo: row.shippingInfo,
+          orderItems: row.orderItems,
+          paymentInfo: row.paymentInfo || { id: "CSV", status: "En attente", method: "transfer" },
+          itemsPrice: row.itemsPrice || 0,
+          shippingPrice: row.shippingPrice || 0,
+          totalPrice: row.totalPrice || 0,
+          client: row.client,
+          source: "csv-import",
+          notes: row.notes || "Import CSV",
+        });
+        legacyResults.created++;
+      } catch (err) {
+        legacyResults.errors.push({ row: i + 1, message: err.message });
+      }
+    }
+    return res.status(201).json({ success: true, data: legacyResults, message: `${legacyResults.created} commande(s) importée(s)` });
+  } else {
+    return next(new ErrorHandler("Fournissez csvData (string CSV) ou orders (tableau JSON)", 400));
   }
+
+  if (rows.length === 0) {
+    return next(new ErrorHandler("Aucun produit valide trouvé dans le CSV", 400));
+  }
+
+  // Resolve products by reference (refFabricant, codeEAN, or name)
+  const orderItems = [];
+  const errors = [];
+  let itemsPrice = 0;
+
+  for (let i = 0; i < rows.length; i++) {
+    const { ref, quantity } = rows[i];
+    const product = await Product.findOne({
+      $or: [
+        { refFabricant: ref },
+        { codeEAN: ref },
+        { name: { $regex: new RegExp(`^${ref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") } },
+      ],
+    });
+
+    if (!product) {
+      errors.push({ row: i + 2, ref, message: `Produit introuvable: "${ref}"` });
+      continue;
+    }
+    if (product.stock < quantity) {
+      errors.push({ row: i + 2, ref, message: `Stock insuffisant pour "${product.name}" (disponible: ${product.stock})` });
+      continue;
+    }
+
+    const price = product.discountPercentage > 0
+      ? product.price * (1 - product.discountPercentage / 100)
+      : product.price;
+
+    orderItems.push({
+      name: product.name,
+      price,
+      quantity,
+      image: product.images?.[0]?.url || "",
+      product: product._id,
+    });
+    itemsPrice += price * quantity;
+  }
+
+  if (orderItems.length === 0) {
+    return res.status(400).json({
+      success: false,
+      data: { created: 0, errors },
+      message: "Aucun produit valide — commande non créée",
+    });
+  }
+
+  // Determine shipping
+  const settings = await SiteSettings.findOne();
+  const freeThreshold = settings?.freeShippingThreshold || 500;
+  const shippingPrice = itemsPrice >= freeThreshold ? 0 : 49;
+  const totalPrice = itemsPrice + shippingPrice;
+
+  // Determine client: use provided clientId or the authenticated user
+  const orderClient = clientId || req.user?.id;
+
+  const order = await Order.create({
+    shippingInfo: shippingInfo || { address: "À préciser", city: "À préciser", phoneNumber: "À préciser" },
+    orderItems,
+    paymentInfo: { id: "CSV", status: "En attente", method: "transfer" },
+    itemsPrice,
+    shippingPrice,
+    totalPrice,
+    client: orderClient,
+    source: "csv-import",
+    notes: `Import CSV — ${orderItems.length} produit(s)`,
+  });
 
   res.status(201).json({
     success: true,
-    data: results,
-    message: `${results.created} commande(s) importée(s), ${results.errors.length} erreur(s)`,
+    data: {
+      order,
+      imported: orderItems.length,
+      errors,
+    },
+    message: `Commande créée avec ${orderItems.length} produit(s), ${errors.length} erreur(s)`,
   });
 });
 

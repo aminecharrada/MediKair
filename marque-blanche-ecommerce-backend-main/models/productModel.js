@@ -210,4 +210,51 @@ productSchema.pre("save", function (next) {
   next();
 });
 
+// ── Meilisearch auto-sync hooks ─────────────────────────────────────
+function getMeiliIndex() {
+  try {
+    const { getIndex, transformProduct } = require("../config/meilisearch");
+    return { index: getIndex(), transformProduct };
+  } catch {
+    return null;
+  }
+}
+
+// Sync to Meilisearch after save (create / update)
+productSchema.post("save", async function () {
+  const meili = getMeiliIndex();
+  if (!meili) return;
+  try {
+    const doc = meili.transformProduct(this);
+    await meili.index.addDocuments([doc]);
+  } catch (err) {
+    console.error("Meilisearch sync (save) failed:", err.message);
+  }
+});
+
+// Sync to Meilisearch after findOneAndUpdate
+productSchema.post("findOneAndUpdate", async function (doc) {
+  if (!doc) return;
+  const meili = getMeiliIndex();
+  if (!meili) return;
+  try {
+    const transformed = meili.transformProduct(doc);
+    await meili.index.addDocuments([transformed]);
+  } catch (err) {
+    console.error("Meilisearch sync (update) failed:", err.message);
+  }
+});
+
+// Remove from Meilisearch after delete
+productSchema.post("findOneAndDelete", async function (doc) {
+  if (!doc) return;
+  const meili = getMeiliIndex();
+  if (!meili) return;
+  try {
+    await meili.index.deleteDocument(doc._id.toString());
+  } catch (err) {
+    console.error("Meilisearch sync (delete) failed:", err.message);
+  }
+});
+
 module.exports = mongoose.model("Product", productSchema);

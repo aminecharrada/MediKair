@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 
 export default function LoginPage() {
@@ -13,13 +14,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    name: "",
     cabinet: "",
     email: "",
     password: "",
   });
   const { login, register } = useAuth();
+  const { syncCart } = useCart();
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,7 +33,7 @@ export default function LoginPage() {
     try {
       if (isRegister) {
         await register({
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
+          name: formData.name,
           email: formData.email,
           password: formData.password,
           cabinet: formData.cabinet,
@@ -42,6 +43,8 @@ export default function LoginPage() {
         await login(formData.email, formData.password);
         toast.success("Connexion réussie !");
       }
+      // Sync cart with server after auth
+      await syncCart();
       navigate("/dashboard");
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Une erreur est survenue");
@@ -106,15 +109,9 @@ export default function LoginPage() {
 
           <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
             {isRegister && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="firstName">Prénom</Label>
-                  <Input id="firstName" placeholder="Dr. Ahmed" className="mt-1.5" value={formData.firstName} onChange={handleChange} />
-                </div>
-                <div>
-                  <Label htmlFor="lastName">Nom</Label>
-                  <Input id="lastName" placeholder="Bennani" className="mt-1.5" value={formData.lastName} onChange={handleChange} />
-                </div>
+              <div>
+                <Label htmlFor="name">Nom complet</Label>
+                <Input id="name" placeholder="Dr. Ahmed Bennani" className="mt-1.5" value={formData.name} onChange={handleChange} />
               </div>
             )}
             {isRegister && (

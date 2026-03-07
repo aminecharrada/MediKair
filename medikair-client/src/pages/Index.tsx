@@ -1,15 +1,38 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowRight, Truck, ShieldCheck, Sparkles, Star, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Truck, ShieldCheck, Sparkles, Star, Loader2, ChevronLeft, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { categoryMeta } from "@/types/product";
 import ProductCard from "@/components/ProductCard";
-import heroImage from "@/assets/hero-dental.jpg";
-import { useEffect, useState } from "react";
-import { productsAPI, categoriesAPI } from "@/api";
+import heroImageFallback from "@/assets/hero-dental.jpg";
+import { useEffect, useState, useCallback } from "react";
+import { productsAPI, categoriesAPI, heroAPI, promotionsAPI } from "@/api";
 import type { Product, Category } from "@/types/product";
+import { Tag } from "lucide-react";
+
+interface Promotion {
+  _id: string;
+  name: string;
+  description: string;
+  type: string;
+  discount: number;
+  offerType: string;
+  startDate: string;
+  endDate: string;
+  code?: string;
+  products?: { _id: string; name: string; price: number; images?: { url: string }[] }[];
+}
+
+interface HeroImage {
+  _id: string;
+  image: { url: string };
+  title: string;
+  subtitle: string;
+  order: number;
+  isActive: boolean;
+}
 
 const stats = [
   { value: "5 000+", label: "Références" },
@@ -21,17 +44,24 @@ const stats = [
 const Index = () => {
   const [featured, setFeatured] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [heroImages, setHeroImages] = useState<HeroImage[]>([]);
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [prodRes, catRes] = await Promise.all([
+        const [prodRes, catRes, heroRes, promoRes] = await Promise.all([
           productsAPI.getAll({ featured: true }),
           categoriesAPI.getAll(),
+          heroAPI.getActive(),
+          promotionsAPI.getActive().catch(() => ({ data: { data: [] } })),
         ]);
         setFeatured((prodRes.data.data || []).slice(0, 4));
         setCategories(catRes.data.data || []);
+        setHeroImages(heroRes.data.data || []);
+        setPromotions(promoRes.data.data || []);
       } catch (err) {
         console.error("Failed to load homepage data:", err);
       } finally {
@@ -41,23 +71,61 @@ const Index = () => {
     fetchData();
   }, []);
 
+  // Auto-advance hero carousel
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    const timer = setInterval(() => setHeroIndex((i) => (i + 1) % heroImages.length), 5000);
+    return () => clearInterval(timer);
+  }, [heroImages.length]);
+
+  const heroPrev = useCallback(() => setHeroIndex((i) => (i - 1 + heroImages.length) % heroImages.length), [heroImages.length]);
+  const heroNext = useCallback(() => setHeroIndex((i) => (i + 1) % heroImages.length), [heroImages.length]);
+
+  const currentHero = heroImages[heroIndex];
+  const heroBg = currentHero?.image?.url || heroImageFallback;
+  const heroTitle = currentHero?.title || "Matériel dentaire";
+  const heroSubtitle = currentHero?.subtitle || "intelligent & accessible";
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero */}
+      {/* Hero Carousel */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img src={heroImage} alt="Cabinet dentaire moderne" className="h-full w-full object-cover" />
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={heroBg}
+              src={heroBg}
+              alt={heroTitle}
+              className="h-full w-full object-cover"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+            />
+          </AnimatePresence>
           <div className="absolute inset-0 bg-hero-gradient opacity-85" />
         </div>
+
+        {heroImages.length > 1 && (
+          <>
+            <button onClick={heroPrev} className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-background/30 p-1.5 text-primary-foreground backdrop-blur-sm transition-colors hover:bg-background/50 sm:left-4 sm:p-2">
+              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
+            <button onClick={heroNext} className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-background/30 p-1.5 text-primary-foreground backdrop-blur-sm transition-colors hover:bg-background/50 sm:right-4 sm:p-2">
+              <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
+          </>
+        )}
+
         <div className="container relative mx-auto px-4 py-16 sm:py-24 md:py-36">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-2xl">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1 text-xs font-medium text-primary-foreground">
               <Sparkles className="h-3 w-3" /> Recommandations IA intégrées
             </span>
             <h1 className="mt-5 font-display text-2xl font-extrabold leading-tight text-primary-foreground sm:text-4xl md:text-5xl lg:text-6xl">
-              Matériel dentaire<br /><span className="opacity-80">intelligent & accessible</span>
+              {heroTitle}<br /><span className="opacity-80">{heroSubtitle}</span>
             </h1>
             <p className="mt-3 max-w-lg text-sm leading-relaxed text-primary-foreground/80 sm:mt-5 sm:text-base md:text-lg">
               La plateforme B2B qui comprend vos besoins. Commandez vos consommables en 3 clics grâce à notre assistant d'approvisionnement intelligent.
@@ -76,6 +144,16 @@ const Index = () => {
             </div>
           </motion.div>
         </div>
+
+        {/* Carousel dots */}
+        {heroImages.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+            {heroImages.map((_, i) => (
+              <button key={i} onClick={() => setHeroIndex(i)}
+                className={`h-2 rounded-full transition-all ${i === heroIndex ? "w-6 bg-primary-foreground" : "w-2 bg-primary-foreground/40"}`} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Stats */}
@@ -89,6 +167,43 @@ const Index = () => {
           ))}
         </div>
       </section>
+
+      {/* Promotions Banner */}
+      {promotions.length > 0 && (
+        <section className="bg-secondary/5 border-b border-border">
+          <div className="container mx-auto px-4 py-6 sm:py-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Tag className="h-5 w-5 text-secondary" />
+              <h2 className="font-display text-lg font-bold sm:text-xl">Promotions en cours</h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {promotions.slice(0, 3).map((promo) => (
+                <motion.div key={promo._id} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                  className="rounded-xl border border-secondary/20 bg-card p-4 shadow-card">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-display text-sm font-semibold sm:text-base">{promo.name}</h3>
+                      {promo.description && <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{promo.description}</p>}
+                    </div>
+                    <span className="shrink-0 rounded-lg bg-destructive/10 px-2.5 py-1 text-xs font-bold text-destructive">
+                      {promo.type === "percentage" ? `-${promo.discount}%` : promo.type === "fixed" ? `-${promo.discount} TND` : promo.type === "freeShipping" ? "Livraison gratuite" : `-${promo.discount}%`}
+                    </span>
+                  </div>
+                  {promo.code && (
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-dashed border-secondary/40 bg-secondary/5 px-3 py-1.5">
+                      <span className="text-[10px] text-muted-foreground">Code :</span>
+                      <span className="text-xs font-bold text-secondary">{promo.code}</span>
+                    </div>
+                  )}
+                  <p className="mt-2 text-[10px] text-muted-foreground">
+                    Jusqu'au {new Date(promo.endDate).toLocaleDateString("fr-FR")}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Categories */}
       <section className="container mx-auto px-4 py-10 sm:py-16">

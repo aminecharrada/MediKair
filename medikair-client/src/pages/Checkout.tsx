@@ -27,7 +27,12 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState({
     cabinet: "", contact: "", address: "", city: "", zip: "", phone: "", email: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState("Virement bancaire");
+  const paymentOptions = [
+    { value: "transfer", label: "Virement bancaire" },
+    { value: "cheque", label: "Chèque" },
+    { value: "cod", label: "Paiement à la livraison" },
+  ];
+  const [paymentMethod, setPaymentMethod] = useState("transfer");
 
   const shipping = subtotal > 500 ? 0 : 49;
   const total = subtotal + shipping;
@@ -40,9 +45,9 @@ export default function CheckoutPage() {
         shippingInfo: {
           address: address.address,
           city: address.city,
-          phoneNo: address.phone,
+          phoneNumber: address.phone,
           postalCode: address.zip,
-          country: "Morocco",
+          country: "Tunisie",
         },
         orderItems: items.map((item) => ({
           name: item.name,
@@ -132,10 +137,10 @@ export default function CheckoutPage() {
                   className="rounded-xl border border-border bg-card p-4 shadow-card sm:p-6">
                   <h2 className="font-display text-base font-bold flex items-center gap-2 sm:text-lg"><CreditCard className="h-4 w-4 text-secondary sm:h-5 sm:w-5" />Mode de paiement</h2>
                   <div className="mt-4 space-y-2 sm:mt-6 sm:space-y-3">
-                    {["Virement bancaire", "Chèque", "Paiement à la livraison"].map((method) => (
-                      <label key={method} className="flex items-center gap-3 rounded-lg border border-border p-4 cursor-pointer hover:border-secondary/40 transition-colors">
-                        <input type="radio" name="payment" className="h-4 w-4 accent-secondary" checked={paymentMethod === method} onChange={() => setPaymentMethod(method)} />
-                        <span className="font-medium">{method}</span>
+                    {paymentOptions.map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-3 rounded-lg border border-border p-4 cursor-pointer hover:border-secondary/40 transition-colors">
+                        <input type="radio" name="payment" className="h-4 w-4 accent-secondary" checked={paymentMethod === opt.value} onChange={() => setPaymentMethod(opt.value)} />
+                        <span className="font-medium">{opt.label}</span>
                       </label>
                     ))}
                   </div>

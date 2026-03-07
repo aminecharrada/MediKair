@@ -1,16 +1,82 @@
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from "lucide-react";
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Tag, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/context/CartContext";
+import { promotionsAPI, aiAPI } from "@/api";
+import { toast } from "sonner";
+import type { Product } from "@/types/product";
 
 export default function CartPage() {
   const { items, updateQty, removeItem, subtotal } = useCart();
+  const [promoCode, setPromoCode] = useState("");
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoName, setPromoName] = useState("");
+  const [applyingPromo, setApplyingPromo] = useState(false);
+  const [crossSell, setCrossSell] = useState<Product[]>([]);
+
+  // Fetch cross-sell recommendations when cart items change
+  useEffect(() => {
+    const fetchCrossSell = async () => {
+      if (items.length === 0) {
+        setCrossSell([]);
+        return;
+      }
+      try {
+        const productIds = items.map((item) => item.productId);
+        const res = await aiAPI.getCrossSell(productIds, 4);
+        setCrossSell(res.data?.recommendations || []);
+      } catch {
+        setCrossSell([]);
+      }
+    };
+    fetchCrossSell();
+  }, [items]);
 
   const shipping = subtotal > 500 ? 0 : 49;
-  const total = subtotal + shipping;
+  const total = Math.max(0, subtotal - promoDiscount + shipping);
+
+  const applyPromoCode = async () => {
+    if (!promoCode.trim()) return;
+    setApplyingPromo(true);
+    try {
+      const res = await promotionsAPI.getActive();
+      const promos = res.data.data || [];
+      const matched = promos.find(
+        (p: any) => p.code && p.code.toLowerCase() === promoCode.trim().toLowerCase()
+      );
+      if (!matched) {
+        toast.error("Code promo invalide ou expiré");
+        setPromoDiscount(0);
+        setPromoName("");
+      } else {
+        let discount = 0;
+        if (matched.type === "percentage") {
+          discount = subtotal * (matched.discount / 100);
+        } else if (matched.type === "fixed") {
+          discount = matched.discount;
+        }
+        if (matched.minOrderAmount && subtotal < matched.minOrderAmount) {
+          toast.error(`Montant minimum requis : ${matched.minOrderAmount} TND`);
+          setPromoDiscount(0);
+          setPromoName("");
+        } else {
+          setPromoDiscount(discount);
+          setPromoName(matched.name);
+          toast.success(`Code "${matched.code}" appliqué : -${matched.type === "percentage" ? matched.discount + "%" : matched.discount + " TND"}`);
+        }
+      }
+    } catch {
+      toast.error("Erreur lors de la vérification du code");
+    } finally {
+      setApplyingPromo(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -94,11 +160,28 @@ export default function CartPage() {
                       Livraison gratuite à partir de 500 TND
                     </p>
                   )}
+                  {promoDiscount > 0 && (
+                    <div className="flex justify-between text-destructive">
+                      <dt className="text-sm">Promo ({promoName})</dt>
+                      <dd className="text-sm font-medium">-{promoDiscount.toFixed(2)} TND</dd>
+                    </div>
+                  )}
                   <div className="border-t border-border pt-3 flex justify-between">
                     <dt className="font-semibold">Total TTC</dt>
                     <dd className="font-display text-lg font-extrabold sm:text-xl">{total.toFixed(2)} TND</dd>
                   </div>
                 </dl>
+                {/* Promo code */}
+                <div className="mt-4 flex gap-2">
+                  <div className="relative flex-1">
+                    <Tag className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input placeholder="Code promo" value={promoCode} onChange={(e) => setPromoCode(e.target.value)}
+                      className="pl-8 text-sm" onKeyDown={(e) => e.key === "Enter" && applyPromoCode()} />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={applyPromoCode} disabled={applyingPromo || !promoCode.trim()}>
+                    Appliquer
+                  </Button>
+                </div>
                 <Link to="/checkout">
                   <Button className="mt-6 w-full bg-hero-gradient text-primary-foreground hover:opacity-90 font-semibold" size="lg">
                     Passer la commande
@@ -113,6 +196,22 @@ export default function CartPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Cross-sell: Frequently Bought Together */}
+        {crossSell.length > 0 && items.length > 0 && (
+          <section className="mt-8 sm:mt-12">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-secondary sm:h-5 sm:w-5" />
+              <h2 className="font-display text-base font-bold sm:text-lg">Souvent achetés ensemble</h2>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">Recommandés par l'IA MediKair</p>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-4 sm:gap-5 lg:grid-cols-4">
+              {crossSell.map((p) => (
+                <ProductCard key={p._id || p.id} product={p} />
+              ))}
+            </div>
+          </section>
         )}
       </div>
 

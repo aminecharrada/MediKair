@@ -25,6 +25,8 @@ const promotionRouter = require("./routes/promotionRouter");
 const reportRouter = require("./routes/reportRouter");
 const notificationRouter = require("./routes/notificationRouter");
 const cartRouter = require("./routes/cartRouter");
+const searchRouter = require("./routes/searchRouter");
+const aiRouter = require("./routes/aiRouter");
 
 // requiring middlewares
 const errorMiddleware = require("./middleware/Error");
@@ -44,6 +46,12 @@ process.on("uncaughtException", (err) => {
 
 // connect to db
 connectToDb();
+
+// Initialize Meilisearch index (non-blocking)
+const { configureIndex } = require("./config/meilisearch");
+configureIndex().catch((err) =>
+  console.warn("⚠️  Meilisearch init skipped:", err.message)
+);
 
 // using middlewares
 app.use(
@@ -114,6 +122,8 @@ app.use("/api/promotions", promotionRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/cart", cartRouter);
+app.use("/api/search", searchRouter);
+app.use("/api/ai", aiRouter);
 
 // using other middlewares
 app.use(errorMiddleware);

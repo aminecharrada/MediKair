@@ -1,29 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
-  Package, ShoppingCart, Clock, TrendingUp, Sparkles, ArrowRight, RotateCcw, Loader2,
+  Package, ShoppingCart, Clock, TrendingUp, Sparkles, ArrowRight, RotateCcw, Loader2, FileSpreadsheet, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { productsAPI, ordersAPI } from "@/api";
+import { productsAPI, ordersAPI, aiAPI } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import type { Product } from "@/types/product";
+
+interface OrderItem {
+  product?: string;
+  name?: string;
+  quantity?: number;
+}
 
 interface Order {
   _id: string;
   createdAt: string;
   totalPrice: number;
   orderStatus: string;
-  orderItems: any[];
+  orderItems: OrderItem[];
 }
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [aiRecommended, setAiRecommended] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,6 +42,19 @@ export default function DashboardPage() {
         ]);
         setProducts(prodRes.data.data || []);
         setOrders(orderRes.data.orders || orderRes.data.data || []);
+
+        // Fetch AI hybrid recommendations
+        if (user?._id || user?.id) {
+          try {
+            const clientId = user._id || user.id;
+            const aiRes = await aiAPI.getHybrid(clientId, undefined, 4);
+            if (aiRes.data?.recommendations?.length) {
+              setAiRecommended(aiRes.data.recommendations);
+            }
+          } catch {
+            // AI service unavailable — fallback below in useMemo
+          }
+        }
       } catch (err) {
         console.error("Failed to load dashboard:", err);
       } finally {
@@ -42,11 +62,44 @@ export default function DashboardPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [user]);
 
   const recentOrders = orders.slice(0, 3);
-  const frequentProducts = products.slice(0, 4);
-  const aiRecommended = products.slice(4, 8);
+
+  // Compute frequent products from order history
+  const frequentProducts = useMemo(() => {
+    const freq: Record<string, number> = {};
+    orders.forEach((o) => {
+      o.orderItems?.forEach((item) => {
+        const pid = item.product || "";
+        if (pid) freq[pid] = (freq[pid] || 0) + (item.quantity || 1);
+      });
+    });
+    const sortedIds = Object.entries(freq).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+    const matched: Product[] = [];
+    for (const id of sortedIds) {
+      const p = products.find((pr) => (pr.id || pr._id) === id);
+      if (p) matched.push(p);
+      if (matched.length >= 4) break;
+    }
+    // Fallback: if not enough order data, show featured/popular
+    if (matched.length < 4) {
+      for (const p of products) {
+        if (!matched.some((m) => (m.id || m._id) === (p.id || p._id))) {
+          matched.push(p);
+          if (matched.length >= 4) break;
+        }
+      }
+    }
+    return matched;
+  }, [products, orders]);
+
+  // AI suggestions fallback: products NOT in frequent list (used if AI service call fails)
+  const aiFallback = useMemo(() => {
+    if (aiRecommended.length > 0) return aiRecommended;
+    const freqIds = new Set(frequentProducts.map((p) => p.id || p._id));
+    return products.filter((p) => !freqIds.has(p.id || p._id)).slice(0, 4);
+  }, [products, frequentProducts, aiRecommended]);
 
   const thisMonthOrders = orders.filter((o) => {
     const d = new Date(o.createdAt);
@@ -56,7 +109,7 @@ export default function DashboardPage() {
   const monthSpend = thisMonthOrders.reduce((s, o) => s + (o.totalPrice || 0), 0);
   const totalItems = thisMonthOrders.reduce((s, o) => s + (o.orderItems?.length || 0), 0);
 
-  const userName = user ? `${user.firstName} ${user.lastName}` : "Utilisateur";
+  const userName = user?.name || "Utilisateur";
   const cabinetName = user?.cabinet || "";
 
   return (
@@ -67,6 +120,18 @@ export default function DashboardPage() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="font-display text-xl font-bold sm:text-2xl">Bonjour, {userName} 👋</h1>
           {cabinetName && <p className="text-xs text-muted-foreground sm:text-sm">{cabinetName}</p>}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link to="/import-csv">
+              <Button variant="outline" size="sm">
+                <Upload className="mr-1.5 h-3.5 w-3.5" /> Import CSV
+              </Button>
+            </Link>
+            <Link to="/commandes">
+              <Button variant="outline" size="sm">
+                <Package className="mr-1.5 h-3.5 w-3.5" /> Mes commandes
+              </Button>
+            </Link>
+          </div>
         </motion.div>
 
         {/* Quick stats */}
@@ -154,11 +219,11 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* Frequent Products */}
+        {/* Frequent Products — computed from order history */}
         {!loading && frequentProducts.length > 0 && (
           <section className="mt-6 sm:mt-10">
-            <h2 className="font-display text-base font-bold sm:text-lg">Produits populaires</h2>
-            <p className="text-xs text-muted-foreground sm:text-sm">Découvrez nos produits</p>
+            <h2 className="font-display text-base font-bold sm:text-lg">Vos produits fréquents</h2>
+            <p className="text-xs text-muted-foreground sm:text-sm">Basés sur votre historique de commandes</p>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-4 sm:gap-5 lg:grid-cols-4">
               {frequentProducts.map((p) => (
                 <ProductCard key={p.id || p._id} product={p} />
@@ -168,15 +233,15 @@ export default function DashboardPage() {
         )}
 
         {/* AI Suggestions */}
-        {!loading && aiRecommended.length > 0 && (
+        {!loading && aiFallback.length > 0 && (
           <section className="mt-6 mb-6 sm:mt-10 sm:mb-8">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-secondary sm:h-5 sm:w-5" />
               <h2 className="font-display text-base font-bold sm:text-lg">Suggestions pour vous</h2>
             </div>
-            <p className="text-xs text-muted-foreground sm:text-sm">Basées sur les tendances actuelles</p>
+            <p className="text-xs text-muted-foreground sm:text-sm">Recommandations personnalisées par l'IA MediKair</p>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-4 sm:gap-5 lg:grid-cols-4">
-              {aiRecommended.map((p) => (
+              {aiFallback.map((p) => (
                 <ProductCard key={p.id || p._id} product={p} />
               ))}
             </div>

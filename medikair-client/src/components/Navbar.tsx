@@ -4,6 +4,7 @@ import { ShoppingCart, Search, Menu, X, User, Package, Bell, ClipboardList, BarC
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
+import SearchBar from "@/components/SearchBar";
 
 const navLinks = [
   { label: "Accueil", path: "/" },
@@ -19,15 +20,16 @@ const mobileExtraLinks = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
   const { items } = useCart();
   const cartCount = items.reduce((s, i) => s + i.qty, 0);
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-lg">
-      <div className="container mx-auto flex h-14 items-center justify-between px-4 sm:h-16">
+      <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4 sm:h-16">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/" className="flex shrink-0 items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-hero-gradient sm:h-9 sm:w-9">
             <Package className="h-4 w-4 text-primary-foreground sm:h-5 sm:w-5" />
           </div>
@@ -53,9 +55,20 @@ export default function Navbar() {
           ))}
         </div>
 
+        {/* Desktop SearchBar */}
+        <div className="hidden md:block md:w-72 lg:w-96">
+          <SearchBar />
+        </div>
+
         {/* Actions */}
         <div className="flex items-center gap-1 sm:gap-2">
-          <Button variant="ghost" size="icon" className="hidden md:flex h-9 w-9">
+          {/* Mobile search toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden h-9 w-9"
+            onClick={() => setSearchOpen(!searchOpen)}
+          >
             <Search className="h-5 w-5" />
           </Button>
           <Link to="/panier">
@@ -84,6 +97,20 @@ export default function Navbar() {
           </Button>
         </div>
       </div>
+
+      {/* Mobile search bar */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-visible border-t border-border px-4 py-3 md:hidden"
+          >
+            <SearchBar expanded />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile menu */}
       <AnimatePresence>

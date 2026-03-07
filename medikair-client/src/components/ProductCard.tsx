@@ -44,6 +44,11 @@ export default function ProductCard({ product }: { product: Product }) {
             {product.badge}
           </span>
         )}
+        {!product.badge && product.discountPercentage && product.discountPercentage > 0 && (
+          <span className="absolute left-2 top-2 rounded-md bg-destructive px-1.5 py-0.5 text-[10px] font-semibold text-destructive-foreground sm:left-3 sm:top-3 sm:px-2 sm:text-xs">
+            -{product.discountPercentage}%
+          </span>
+        )}
         {!product.inStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/60">
             <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground sm:px-3 sm:py-1 sm:text-sm">
